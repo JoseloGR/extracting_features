@@ -16,6 +16,19 @@ Para instalar `pipenv` basta con correr el siguiente comando:
 pip install pipenv
 ```
 
+
+### Restauración de BD
+
+Para que el proyecto pueda ejecutarse se debe tener instalado MongoDB de forma local.
+
+Puedes revisar cómo instalar MongoDB dependiendo de tu SO en el siguiente [link](https://docs.mongodb.com/manual/installation/)
+
+Con el siguiente comando restaurarás la BD generada durante la ejecución de los endpoints de extracción
+
+```
+mongorestore tweetsdb/
+```
+
 ### Activar virtual environment
 
 Ejecutar el siguiente comando para activar el virtual env de `pipenv`:
@@ -45,6 +58,20 @@ Con el server corriendo, abrir tu navegador favorito y entrar a `http://127.0.0.
 Cabe resaltar que la información obtenida de Meaning Cloud y Parallel Dots se fue almacenando en una Base de Datos local de MongoDB.
 
 Una vez que todos los tweets tuvieran la información se generó el csv correspondiente con la herramienta de mongo => mongoexport
+
+## Endpoints: Sentimientos y Emociones
+
+Para visualizar los primeros 10 tweets con los resultados de los rasgos ya obtenidos debes ejecutar el endpoint Get Sample Tweets `/tweets`
+
+El endpoint utilizado para encontrar los sentimientos es Get Tweet Sentiments All `/tweet/sentiment/{skip}/{limit}`, donde skip y limit son valores numéricos enteros que se deben pasar para extraer los sentimientos de un rango de tweets.
+
+Por ejemplo para obtener los sentimientos de los primeros 100 tweets se debe pasar `skip=0` y `limit=100`
+
+
+De la misma forma, para obtener las emociones de los tweets se debe mandar a llamar Get Tweet Emotions All `/tweet/emotions/{skip}/{limit}`
+
+Cada endpoint actualiza los valores obtenidos en el documento respectivo del tweet.
+
 
 ## Resultados
 
