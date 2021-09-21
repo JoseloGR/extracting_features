@@ -26,9 +26,9 @@ def document_helper(document) -> dict:
             data[key] = document.get(key)
     return data
 
-async def get_tweets(skip=0, limit=10) -> list:
+async def get_tweets(collectionName='tweets', skip=0, limit=10) -> list:
     db = get_mongo_client()
-    collection = db.get_collection("tweets")
+    collection = db.get_collection(collectionName)
     tweets = []
     async for tweet in collection.find().sort("id").skip(skip).limit(limit):
         tweets.append(document_helper(tweet))
@@ -44,12 +44,12 @@ async def get_tweet(id: str):
     )
     return tweet
 
-async def add_new_sentiments_tweet_mcloud(id: int, data: dict) -> str:
+async def add_new_sentiments_tweet_mcloud(id: int, data: dict, collectionName='sentimentsMCloud') -> str:
     if data.get('status'):
         del data['status']
     data['id'] = id
     db = get_mongo_client()
-    collection = db.get_collection("sentimentsMCloud")
+    collection = db.get_collection(collectionName)
     sentiment_tweet = await collection.find_one({"id": id})
     result = ''
     if not sentiment_tweet:
@@ -64,7 +64,7 @@ async def add_new_sentiments_tweet_mcloud(id: int, data: dict) -> str:
         result = f"ACTUALIZADO {updated_tweet.modified_count}"
     return result
 
-async def update_tweet_with_sentiments_mcloud(id: int, data: dict) -> bool:
+async def update_tweet_with_sentiments_mcloud(id: int, data: dict, collectionName='tweets') -> bool:
     _status = False
     payload = {
         'score_tag': data.get('score_tag'),
@@ -74,7 +74,7 @@ async def update_tweet_with_sentiments_mcloud(id: int, data: dict) -> bool:
         'irony': data.get('irony')
     }
     db = get_mongo_client()
-    collection = db.get_collection("tweets")
+    collection = db.get_collection(collectionName)
     updated_tweet = await collection.update_one(
         {"id": id},
         {"$set": payload}
@@ -83,10 +83,10 @@ async def update_tweet_with_sentiments_mcloud(id: int, data: dict) -> bool:
         _status = True
     return _status
 
-async def update_tweet_with_emotions_pdots(id: int, data: dict) -> bool:
+async def update_tweet_with_emotions_pdots(id: int, data: dict, collectionName='tweets') -> bool:
     _status = False
     db = get_mongo_client()
-    collection = db.get_collection("tweets")
+    collection = db.get_collection(collectionName)
     updated_tweet = await collection.update_one(
         {"id": id},
         {"$set": data.get('emotion', {})}
@@ -179,12 +179,14 @@ async def get_tweet_sentiments(id: str):
 
 @app.get('/tweet/sentiment/{skip}/{limit}', tags=["Tweets"], response_description="Emotions Retrieved For All Tweets")
 async def get_tweet_sentiments_all(skip: int, limit: int):
-    tweets = await get_tweets(skip, limit)
+    collectionName = 'testing'
+    collectionName2 = 'sentimentsMCloudTesting'
+    tweets = await get_tweets(collectionName, skip, limit)
     start = time.time()
     for tweet in tweets:
         entities_response = await extract_sentiments_with_meaning_cloud(tweet.get('text'))
-        updated_tweet = await update_tweet_with_sentiments_mcloud(tweet.get('id'), entities_response)
-        saved = await add_new_sentiments_tweet_mcloud(tweet.get('id'), entities_response)
+        updated_tweet = await update_tweet_with_sentiments_mcloud(tweet.get('id'), entities_response, collectionName)
+        saved = await add_new_sentiments_tweet_mcloud(tweet.get('id'), entities_response, collectionName2)
         print(f"{tweet.get('id')} {updated_tweet} - {saved}")
         await asyncio.sleep(2)
     end = time.time()
@@ -202,11 +204,12 @@ async def get_tweet_emotions(id: str):
 
 @app.get('/tweet/emotions/{skip}/{limit}', tags=["Tweets"], response_description="Emotions Retrieved For All Tweets")
 async def get_tweet_emotions_all(skip: int, limit: int):
-    tweets = await get_tweets(skip, limit)
+    collectionName = 'testing'
+    tweets = await get_tweets(collectionName, skip, limit)
     start = time.time()
     for tweet in tweets:
         emotions_response = await extract_emotions_with_parallel_dots(tweet.get('text'))
-        updated_tweet = await update_tweet_with_emotions_pdots(tweet.get('id'), emotions_response)
+        updated_tweet = await update_tweet_with_emotions_pdots(tweet.get('id'), emotions_response, collectionName)
         print(f"{tweet.get('id')} {updated_tweet}")
         await asyncio.sleep(5)
     end = time.time()
