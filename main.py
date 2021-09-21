@@ -5,6 +5,7 @@ import time
 import asyncio
 from fastapi import FastAPI, HTTPException
 from bson.objectid import ObjectId
+from tokenization import get_entities
 from config import (
     MONGO_CONNECTION_STRING,
     MEANING_CLOUD_KEY,
@@ -90,6 +91,20 @@ async def update_tweet_with_emotions_pdots(id: int, data: dict, collectionName='
     updated_tweet = await collection.update_one(
         {"id": id},
         {"$set": data.get('emotion', {})}
+    )
+    if updated_tweet.modified_count == 1:
+        _status = True
+    return _status
+
+async def update_tweet_with_entities_spacy(id: int, data: dict, collectionName='tweets') -> bool:
+    _status = False
+    exists_gpe = list(filter(lambda e: e.get('type', '') == 'GPE', data.get('entities', [])))
+    data['gpe'] = 1 if len(exists_gpe) > 0 else 0
+    db = get_mongo_client()
+    collection = db.get_collection(collectionName)
+    updated_tweet = await collection.update_one(
+        {"id": id},
+        {"$set": data}
     )
     if updated_tweet.modified_count == 1:
         _status = True
@@ -212,6 +227,21 @@ async def get_tweet_emotions_all(skip: int, limit: int):
         updated_tweet = await update_tweet_with_emotions_pdots(tweet.get('id'), emotions_response, collectionName)
         print(f"{tweet.get('id')} {updated_tweet}")
         await asyncio.sleep(5)
+    end = time.time()
+    print(f"It took {round(end-start)} seconds to finish execution")
+    
+    return {'success': f"{len(tweets)} analized tweets"}
+
+
+@app.get('/tweet/entities/{skip}/{limit}', tags=["Tweets"], response_description="Entities Retrieved For All Tweets")
+async def get_tweet_entities_all(skip: int, limit: int):
+    collectionName = 'testing'
+    tweets = await get_tweets(collectionName, skip, limit)
+    start = time.time()
+    for tweet in tweets:
+        entities = await get_entities(tweet.get('text'))
+        updated_tweet = await update_tweet_with_entities_spacy(tweet.get('id'), {'entities': entities}, collectionName)
+        print(f"{tweet.get('id')} {updated_tweet}")
     end = time.time()
     print(f"It took {round(end-start)} seconds to finish execution")
     

@@ -10,6 +10,9 @@ python-dotenv = "*"
 motor = "*"
 meaningcloud-python = "*"
 requests = "*"
+spacy = "*"
+pandas = "*"
+numpy = "*"
 
 [dev-packages]
 
